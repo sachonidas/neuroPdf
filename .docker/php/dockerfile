@@ -1,0 +1,38 @@
+FROM php:8.4-fpm
+
+WORKDIR /var/www/html
+
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libpq-dev \
+    libsodium-dev \
+    libicu-dev \
+    libzip-dev \
+    zlib1g-dev \
+    && docker-php-ext-install \
+        pdo \
+        pdo_pgsql \
+        sodium \
+        intl \
+        zip
+
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+    
+RUN curl -sS https://get.symfony.com/cli/installer | bash \
+    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+COPY . .
+
+COPY composer.json composer.lock ./
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+
+RUN ls -la /var/www/html
+
+EXPOSE 9000
+CMD ["php-fpm"]
